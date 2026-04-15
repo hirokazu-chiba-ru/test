@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン成功 - Pythonアプリ</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .success-icon {
+            font-size: 5rem;
+            color: #28a745;
+            margin-bottom: 1rem;
+            animation: bounce 1s ease-in-out;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+        
+        .success-title {
+            font-size: 2.5rem;
+            color: #28a745;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+        
+        .success-message {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 2rem;
+        }
+        
+        .user-info {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 2rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+            border: 2px solid #28a745;
+        }
+        
+        .user-name {
+            font-size: 1.5rem;
+            color: #28a745;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        .login-details {
+            display: grid;
+            gap: 0.75rem;
+            text-align: left;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .detail-value {
+            color: #333;
+            font-family: monospace;
+        }
+        
+        .actions {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        
+        .btn-logout {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-logout:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+        }
+        
+        .btn-home {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-home:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+        }
+        
+        .python-badge {
+            background: #3776ab;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="python-badge">🐍 Python Flask</div>
+        <div class="success-icon">✅</div>
+        <h1 class="success-title">ログインしました</h1>
+        <p class="success-message">
+            <span class="status-indicator"></span>
+            ログインが正常に完了しました
+        </p>
+        
+        <div class="user-info">
+            <div class="user-name">ようこそ、{{ username }}さん！</div>
+            
+            <div class="login-details">
+                <div class="detail-item">
+                    <span class="detail-label">👤 ユーザー名:</span>
+                    <span class="detail-value">{{ username }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">🕐 ログイン時刻:</span>
+                    <span class="detail-value">{{ login_time }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">🔐 認証状態:</span>
+                    <span class="detail-value" style="color: #28a745;">認証済み</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">🌐 セッション:</span>
+                    <span class="detail-value" style="color: #28a745;">アクティブ</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <a href="{{ url_for('logout') }}" class="btn btn-logout">🚪 ログアウト</a>
+            <a href="{{ url_for('home') }}" class="btn btn-home">🏠 ホーム</a>
+        </div>
+        
+        <p style="color: #666; font-size: 0.9rem; margin-top: 2rem;">
+            Powered by Python Flask
+        </p>
+    </div>
+</body>
+</html>
