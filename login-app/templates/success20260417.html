@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン成功</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .success-container {
+            background: white;
+            border-radius: 16px;
+            padding: 56px 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .checkmark {
+            font-size: 72px;
+            margin-bottom: 16px;
+            animation: pop 0.5s ease-out;
+        }
+        @keyframes pop {
+            0% { transform: scale(0); opacity: 0; }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .success-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2d8a4e;
+            margin-bottom: 12px;
+        }
+        .welcome-msg {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+        .username {
+            color: #43e97b;
+            font-weight: 700;
+        }
+        .btn-logout {
+            display: inline-block;
+            padding: 12px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            transition: opacity 0.3s, transform 0.1s;
+        }
+        .btn-logout:hover { opacity: 0.9; }
+        .btn-logout:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="checkmark">✅</div>
+        <h1 class="success-title">ログインが成功しました</h1>
+        <p class="welcome-msg">
+            ようこそ、<span class="username">{{ username }}</span> さん！<br>
+            正常にログインされました。
+        </p>
+        <a href="{{ prefix }}/logout" class="btn-logout">ログアウト</a>
+    </div>
+</body>
+</html>
