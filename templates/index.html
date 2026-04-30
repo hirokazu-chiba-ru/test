@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>テトリス</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 16px;
+  }
+  h1 { font-size: 28px; letter-spacing: 6px; color: #a0a0ff; margin-bottom: 16px; }
+  #main { display: flex; gap: 20px; align-items: flex-start; }
+  canvas { display: block; background: #0d0d1a; border: 2px solid #4a4a8a; }
+  #sidebar { width: 160px; display: flex; flex-direction: column; gap: 14px; }
+  .panel { background: #16213e; border: 1px solid #4a4a8a; border-radius: 8px; padding: 12px; }
+  .panel h3 { font-size: 11px; letter-spacing: 2px; color: #7878cc; margin-bottom: 8px; text-transform: uppercase; }
+  .val { font-size: 22px; font-weight: bold; color: #fff; }
+  #next-canvas { display: block; margin: 0 auto; }
+  button {
+    width: 100%; padding: 10px; background: #4a4a8a; color: #fff;
+    border: none; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-family: inherit; letter-spacing: 1px;
+  }
+  button:hover { background: #6a6aaa; }
+  .keys { font-size: 11px; color: #888; line-height: 1.9; }
+  .keys span { color: #aaf; }
+  #board-wrap { position: relative; }
+  #overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.78);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center; gap: 14px;
+  }
+  #overlay h2 { font-size: 28px; color: #ff6b6b; }
+  #overlay p { color: #aaa; font-size: 13px; text-align: center; }
+  #score-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    justify-content: center; align-items: center; z-index: 100;
+  }
+  #score-modal.open { display: flex; }
+  .modal-box {
+    background: #16213e; border: 2px solid #4a4a8a;
+    border-radius: 12px; padding: 28px 32px; min-width: 300px; text-align: center;
+  }
+  .modal-box h2 { font-size: 20px; color: #a0a0ff; margin-bottom: 16px; }
+  .modal-box input {
+    width: 100%; padding: 8px 12px; background: #0d0d1a; color: #fff;
+    border: 1px solid #4a4a8a; border-radius: 6px;
+    font-family: inherit; font-size: 16px; margin-bottom: 14px;
+  }
+  .modal-box .rank { font-size: 18px; color: #ffd700; margin: 10px 0; }
+  .modal-btn-sub { margin-top: 8px !important; background: #333 !important; }
+  #rankings { margin-top: 20px; width: 340px; }
+  #rankings h2 { font-size: 14px; letter-spacing: 3px; color: #7878cc; margin-bottom: 10px; text-align: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { color: #7878cc; padding: 4px 8px; border-bottom: 1px solid #333; text-align: left; }
+  td { padding: 5px 8px; border-bottom: 1px solid #222; }
+  tr:nth-child(1) td { color: #ffd700; }
+  tr:nth-child(2) td { color: #c0c0c0; }
+  tr:nth-child(3) td { color: #cd7f32; }
+</style>
+</head>
+<body>
+<h1>TETRIS</h1>
+<div id="main">
+  <div id="board-wrap">
+    <canvas id="board" width="300" height="600"></canvas>
+    <div id="overlay">
+      <h2>TETRIS</h2>
+      <p>スペースキーまたはボタンでスタート</p>
+    </div>
+  </div>
+  <div id="sidebar">
+    <div class="panel"><h3>SCORE</h3><div class="val" id="score">0</div></div>
+    <div class="panel"><h3>LEVEL</h3><div class="val" id="level">1</div></div>
+    <div class="panel"><h3>LINES</h3><div class="val" id="lines">0</div></div>
+    <div class="panel"><h3>NEXT</h3><canvas id="next-canvas" width="120" height="80"></canvas></div>
+    <button id="btn" onclick="toggleGame()">START</button>
+    <div class="panel keys">
+      <span>←→</span> 移動<br>
+      <span>↑</span> 回転<br>
+      <span>↓</span> 落下<br>
+      <span>Space</span> ハード落下<br>
+      <span>P</span> 一時停止
+    </div>
+  </div>
+</div>
+
+<div id="rankings">
+  <h2>RANKINGS</h2>
+  <table>
+    <thead><tr><th>#</th><th>名前</th><th>スコア</th><th>Lv</th><th>Lines</th></tr></thead>
+    <tbody id="rank-body"><tr><td colspan="5" style="color:#555;text-align:center">Loading...</td></tr></tbody>
+  </table>
+</div>
+
+<div id="score-modal">
+  <div class="modal-box">
+    <h2>GAME OVER</h2>
+    <p id="modal-score"></p>
+    <div class="rank" id="modal-rank"></div>
+    <input id="player-name" type="text" maxlength="20" placeholder="名前を入力">
+    <button id="submit-btn" onclick="submitScore()">スコアを登録</button>
+    <button class="modal-btn-sub" onclick="closeModal()">スキップ</button>
+  </div>
+</div>
+
+<script>
+const COLS = 10, ROWS = 20, CELL = 30;
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const nextCanvas = document.getElementById('next-canvas');
+const nextCtx = nextCanvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+
+const COLORS = [null,'#00f0f0','#0000f0','#f0a000','#f0f000','#00f000','#a000f0','#f00000'];
+const SHAPES = [
+  null,
+  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+  [[1,0,0],[1,1,1],[0,0,0]],
+  [[0,0,1],[1,1,1],[0,0,0]],
+  [[1,1],[1,1]],
+  [[0,1,1],[1,1,0],[0,0,0]],
+  [[0,1,0],[1,1,1],[0,0,0]],
+  [[1,1,0],[0,1,1],[0,0,0]],
+];
+const LINE_SCORES = [0,100,300,500,800];
+
+let board, piece, nextPiece, score, level, lines, gameState, dropInterval, lastTime, animId;
+let finalScore = 0, finalLevel = 1, finalLines = 0;
+
+function createBoard() { return Array.from({length:ROWS}, () => new Array(COLS).fill(0)); }
+
+function createPiece(type) {
+  return { type, shape: SHAPES[type].map(r=>[...r]),
+           x: Math.floor(COLS/2) - Math.ceil(SHAPES[type][0].length/2), y: 0 };
+}
+
+function randomType() { return Math.floor(Math.random()*7)+1; }
+
+function rotate(shape) {
+  const N=shape.length, M=shape[0].length;
+  const r=Array.from({length:M},()=>new Array(N).fill(0));
+  for(let i=0;i<N;i++) for(let j=0;j<M;j++) r[j][N-1-i]=shape[i][j];
+  return r;
+}
+
+function isValid(b,p,dx=0,dy=0,shape=p.shape) {
+  for(let r=0;r<shape.length;r++) for(let c=0;c<shape[r].length;c++) {
+    if(!shape[r][c]) continue;
+    const nx=p.x+c+dx, ny=p.y+r+dy;
+    if(nx<0||nx>=COLS||ny>=ROWS) return false;
+    if(ny>=0&&b[ny][nx]) return false;
+  }
+  return true;
+}
+
+function merge(b,p) {
+  p.shape.forEach((row,r)=>row.forEach((v,c)=>{if(v) b[p.y+r][p.x+c]=p.type;}));
+}
+
+function clearLines(b) {
+  let cleared=0;
+  for(let r=ROWS-1;r>=0;r--) {
+    if(b[r].every(v=>v)) { b.splice(r,1); b.unshift(new Array(COLS).fill(0)); cleared++; r++; }
+  }
+  return cleared;
+}
+
+function addScore(cleared) {
+  score += LINE_SCORES[cleared]*level;
+  lines += cleared;
+  level = Math.floor(lines/10)+1;
+  dropInterval = Math.max(100, 1000-(level-1)*90);
+}
+
+function drawCell(c,x,y,alpha=1) {
+  if(!c) return;
+  ctx.globalAlpha=alpha;
+  ctx.fillStyle=COLORS[c];
+  ctx.fillRect(x*CELL+1,y*CELL+1,CELL-2,CELL-2);
+  ctx.fillStyle='rgba(255,255,255,0.15)';
+  ctx.fillRect(x*CELL+1,y*CELL+1,CELL-2,6);
+  ctx.globalAlpha=1;
+}
+
+function drawGhost() {
+  let dy=0;
+  while(isValid(board,piece,0,dy+1)) dy++;
+  if(!dy) return;
+  piece.shape.forEach((row,r)=>row.forEach((v,c)=>{if(v) drawCell(piece.type,piece.x+c,piece.y+r+dy,0.2);}));
+}
+
+function drawBoard() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) ctx.strokeRect(c*CELL,r*CELL,CELL,CELL);
+  board.forEach((row,r)=>row.forEach((v,c)=>drawCell(v,c,r)));
+  if(piece&&gameState==='playing') drawGhost();
+  if(piece) piece.shape.forEach((row,r)=>row.forEach((v,c)=>{if(v) drawCell(v,piece.x+c,piece.y+r);}));
+}
+
+function drawNext() {
+  nextCtx.clearRect(0,0,nextCanvas.width,nextCanvas.height);
+  if(!nextPiece) return;
+  const sh=SHAPES[nextPiece], S=24;
+  const ox=Math.floor((nextCanvas.width-sh[0].length*S)/2);
+  const oy=Math.floor((nextCanvas.height-sh.length*S)/2);
+  sh.forEach((row,r)=>row.forEach((v,c)=>{
+    if(!v) return;
+    nextCtx.fillStyle=COLORS[nextPiece];
+    nextCtx.fillRect(ox+c*S+1,oy+r*S+1,S-2,S-2);
+    nextCtx.fillStyle='rgba(255,255,255,0.15)';
+    nextCtx.fillRect(ox+c*S+1,oy+r*S+1,S-2,5);
+  }));
+}
+
+function updateUI() {
+  document.getElementById('score').textContent=score.toLocaleString();
+  document.getElementById('level').textContent=level;
+  document.getElementById('lines').textContent=lines;
+}
+
+function spawnPiece() {
+  piece=createPiece(nextPiece);
+  nextPiece=randomType();
+  drawNext();
+  if(!isValid(board,piece)) gameOver();
+}
+
+function gameOver() {
+  gameState='over';
+  cancelAnimationFrame(animId);
+  finalScore=score; finalLevel=level; finalLines=lines;
+  overlay.innerHTML=`<h2>GAME OVER</h2><p>スコア: ${score.toLocaleString()}</p>`;
+  overlay.style.display='flex';
+  document.getElementById('btn').textContent='RESTART';
+  openScoreModal();
+}
+
+function drop() {
+  if(isValid(board,piece,0,1)) { piece.y++; }
+  else {
+    merge(board,piece);
+    const c=clearLines(board);
+    if(c) addScore(c);
+    updateUI(); spawnPiece();
+  }
+}
+
+function hardDrop() {
+  let dy=0;
+  while(isValid(board,piece,0,dy+1)) dy++;
+  piece.y+=dy; score+=dy*2;
+  merge(board,piece);
+  const c=clearLines(board);
+  if(c) addScore(c);
+  updateUI(); spawnPiece();
+}
+
+let dropAccum=0;
+function gameLoop(ts) {
+  if(gameState!=='playing') return;
+  const delta=ts-(lastTime||ts); lastTime=ts;
+  dropAccum+=delta;
+  if(dropAccum>=dropInterval) { drop(); dropAccum=0; }
+  drawBoard();
+  animId=requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  board=createBoard(); score=0; level=1; lines=0;
+  dropInterval=1000; dropAccum=0; lastTime=null;
+  nextPiece=randomType(); spawnPiece();
+  gameState='playing';
+  overlay.style.display='none';
+  document.getElementById('btn').textContent='RESTART';
+  updateUI();
+  cancelAnimationFrame(animId);
+  animId=requestAnimationFrame(gameLoop);
+}
+
+function toggleGame() {
+  if(gameState==='playing') {
+    gameState='paused'; cancelAnimationFrame(animId);
+    overlay.innerHTML='<h2>PAUSED</h2><p>スペースキーまたはPで再開</p>';
+    overlay.style.display='flex';
+    document.getElementById('btn').textContent='RESUME';
+  } else if(gameState==='paused') {
+    gameState='playing'; overlay.style.display='none';
+    lastTime=null; dropAccum=0;
+    document.getElementById('btn').textContent='RESTART';
+    animId=requestAnimationFrame(gameLoop);
+  } else { startGame(); }
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space') {
+    e.preventDefault();
+    if(gameState==='playing') hardDrop(); else toggleGame();
+    return;
+  }
+  if(e.code==='KeyP') { if(gameState==='playing'||gameState==='paused') toggleGame(); return; }
+  if(gameState!=='playing') return;
+  switch(e.code) {
+    case 'ArrowLeft':  if(isValid(board,piece,-1,0)) piece.x--; break;
+    case 'ArrowRight': if(isValid(board,piece,1,0))  piece.x++; break;
+    case 'ArrowDown':  drop(); dropAccum=0; score+=1; updateUI(); break;
+    case 'ArrowUp': {
+      const rot=rotate(piece.shape);
+      for(const k of [0,1,-1,2,-2]) if(isValid(board,piece,k,0,rot)){piece.shape=rot;piece.x+=k;break;}
+      break;
+    }
+  }
+  drawBoard();
+});
+
+function openScoreModal() {
+  document.getElementById('modal-score').textContent=
+    `スコア: ${finalScore.toLocaleString()}  Lv:${finalLevel}  Lines:${finalLines}`;
+  document.getElementById('modal-rank').textContent='';
+  document.getElementById('player-name').value='';
+  document.getElementById('submit-btn').textContent='スコアを登録';
+  document.getElementById('submit-btn').onclick=submitScore;
+  document.getElementById('score-modal').classList.add('open');
+  document.getElementById('player-name').focus();
+}
+
+function closeModal() {
+  document.getElementById('score-modal').classList.remove('open');
+  loadRankings();
+}
+
+async function submitScore() {
+  const name = document.getElementById('player-name').value.trim() || 'Player';
+  const res = await fetch('/api/scores', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name, score:finalScore, level:finalLevel, lines:finalLines}),
+  });
+  const data = await res.json();
+  const rankEl = document.getElementById('modal-rank');
+  rankEl.textContent = data.rank ? `🏆 ${data.rank}位にランクイン！` : 'スコアを登録しました';
+  document.getElementById('submit-btn').textContent='閉じる';
+  document.getElementById('submit-btn').onclick=closeModal;
+  loadRankings();
+}
+
+async function loadRankings() {
+  try {
+    const res = await fetch('/api/scores');
+    const scores = await res.json();
+    const tbody = document.getElementById('rank-body');
+    if(!scores.length) {
+      tbody.innerHTML='<tr><td colspan="5" style="color:#555;text-align:center">まだスコアがありません</td></tr>';
+      return;
+    }
+    tbody.innerHTML = scores.map((s,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${escHtml(s.name)}</td>
+        <td>${s.score.toLocaleString()}</td>
+        <td>${s.level}</td>
+        <td>${s.lines}</td>
+      </tr>`).join('');
+  } catch(e) {
+    document.getElementById('rank-body').innerHTML=
+      '<tr><td colspan="5" style="color:#555;text-align:center">取得できませんでした</td></tr>';
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+gameState='idle';
+drawBoard();
+loadRankings();
+</script>
+</body>
+</html>
