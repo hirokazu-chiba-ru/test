@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SignFlow — 電子署名</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;color:#1e293b;min-height:100vh}
+
+.header{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.logo{font-size:20px;font-weight:700;letter-spacing:-.5px}.logo span{color:#93c5fd}
+
+.progress{background:#fff;padding:14px 0;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #e2e8f0;gap:0}
+.step-item{display:flex;align-items:center;gap:8px}
+.step-circle{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;transition:all .3s}
+.step-circle.pending{background:#e2e8f0;color:#94a3b8}
+.step-circle.active{background:#2563eb;color:#fff;box-shadow:0 0 0 3px #bfdbfe}
+.step-circle.done{background:#10b981;color:#fff}
+.step-label{font-size:13px;font-weight:500;color:#94a3b8;transition:color .3s}
+.step-label.active{color:#2563eb}.step-label.done{color:#10b981}
+.step-conn{width:56px;height:2px;background:#e2e8f0;margin:0 6px;transition:background .3s}
+.step-conn.done{background:#10b981}
+
+.main{max-width:980px;margin:24px auto;padding:0 16px}
+.card{background:#fff;border-radius:12px;padding:22px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 12px rgba(0,0,0,.04);margin-bottom:14px}
+.card-title{font-size:15px;font-weight:600;color:#1e293b;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+.upload-area{border:2px dashed #cbd5e1;border-radius:10px;padding:44px 20px;text-align:center;cursor:pointer;transition:all .2s;background:#f8fafc}
+.upload-area:hover,.upload-area.dragover{border-color:#2563eb;background:#eff6ff}
+.upload-icon{font-size:50px;margin-bottom:10px}
+.upload-text{color:#475569;font-size:14px;margin-bottom:4px}
+.upload-hint{color:#94a3b8;font-size:12px}
+.upload-btn-label{display:inline-block;margin-top:12px;padding:8px 18px;background:#2563eb;color:#fff;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer}
+.upload-btn-label:hover{background:#1d4ed8}
+#fileInput{display:none}
+.file-chosen{display:none;align-items:center;gap:12px;padding:14px;background:#f0fdf4;border-radius:8px;border:1px solid #86efac}
+.file-chosen.show{display:flex}
+.file-chosen .fname{font-size:14px;font-weight:500;color:#166534}
+.file-chosen .fsize{font-size:12px;color:#16a34a}
+.change-link{margin-left:auto;font-size:12px;color:#2563eb;cursor:pointer;text-decoration:underline;white-space:nowrap}
+
+.sect-label{font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.people-list{display:flex;flex-direction:column;gap:8px}
+.person-row{display:flex;gap:8px;align-items:center;animation:fadeDown .25s ease}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.person-row input{flex:1;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;color:#1e293b;background:#fafafa;transition:border-color .2s}
+.person-row input:focus{outline:none;border-color:#2563eb;background:#fff}
+.person-row input::placeholder{color:#cbd5e1}
+.btn-rm{background:none;border:none;color:#d1d5db;cursor:pointer;font-size:20px;line-height:1;padding:0 2px;transition:color .15s}
+.btn-rm:hover{color:#ef4444}
+.btn-add{display:flex;align-items:center;gap:6px;background:none;border:1.5px dashed #93c5fd;color:#2563eb;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;margin-top:8px;transition:all .2s}
+.btn-add:hover{background:#eff6ff;border-color:#2563eb}
+.btn-add:disabled{opacity:.45;cursor:not-allowed}
+
+textarea{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:90px;background:#fafafa;color:#1e293b;transition:border-color .2s}
+textarea:focus{outline:none;border-color:#2563eb;background:#fff}
+textarea::placeholder{color:#cbd5e1}
+
+.nav-bar{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.btn-primary{background:#2563eb;color:#fff;border:none;padding:11px 26px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.btn-primary:hover{background:#1d4ed8;box-shadow:0 4px 12px rgba(37,99,235,.35);transform:translateY(-1px)}
+.btn-back{background:#fff;color:#64748b;border:1px solid #e2e8f0;padding:10px 20px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s}
+.btn-back:hover{background:#f8fafc}
+
+.sign-layout{display:grid;grid-template-columns:190px 1fr;gap:14px;align-items:start}
+.signers-panel{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.07);position:sticky;top:16px}
+.signers-panel h3{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.signer-card{padding:9px;border-radius:8px;cursor:pointer;margin-bottom:6px;border:2px solid transparent;transition:all .15s}
+.signer-card:hover{background:#f8fafc}
+.role-tag{font-size:9px;font-weight:700;color:#fff;padding:2px 5px;border-radius:3px;display:inline-block;margin-bottom:3px}
+.signer-name{font-size:13px;font-weight:500;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.signer-email{font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tip-box{margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9;font-size:11px;color:#94a3b8;line-height:1.5}
+
+.doc-panel{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.doc-hint{background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:8px 12px;font-size:12px;color:#713f12;margin-bottom:10px}
+.doc-viewer{position:relative;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;background:#f8fafc;min-height:360px}
+#docImg{width:100%;display:block}
+#docPdf{width:100%;height:580px;border:none;display:block}
+.doc-overlay{position:absolute;inset:0;cursor:crosshair;z-index:10}
+.sig-box{position:absolute;border:2px solid;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;cursor:move;user-select:none;display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.92);z-index:20;white-space:nowrap;backdrop-filter:blur(2px);transform:translate(-50%,-50%)}
+.sig-del{position:absolute;top:-8px;right:-8px;width:16px;height:16px;border-radius:50%;background:#ef4444;color:#fff;border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;z-index:30;line-height:1}
+
+.preview-layout{display:grid;grid-template-columns:270px 1fr;gap:14px;align-items:start}
+.preview-col{display:flex;flex-direction:column;gap:12px}
+.preview-card{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.preview-card h3{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.person-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f1f5f9}
+.person-item:last-child{border-bottom:none}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0}
+.p-name{font-size:13px;font-weight:500}
+.p-email{font-size:11px;color:#94a3b8}
+.msg-preview{background:#f8fafc;border-radius:6px;padding:10px;font-size:13px;color:#475569;line-height:1.6}
+.sig-count-box{text-align:center;padding:10px 0}
+.sig-count-num{font-size:32px;font-weight:700;color:#2563eb}
+.sig-count-label{font-size:12px;color:#64748b;margin-top:2px}
+.preview-doc-card{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.preview-doc-card h3{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.preview-doc-wrap{position:relative;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden}
+#previewImg{width:100%;display:block}
+#previewPdf{width:100%;height:580px;border:none;display:block}
+
+.success-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.success-bg.show{display:flex}
+.success-modal{background:#fff;border-radius:20px;padding:44px 36px;text-align:center;max-width:360px;width:90%;animation:popIn .35s cubic-bezier(.175,.885,.32,1.275)}
+@keyframes popIn{from{transform:scale(.65);opacity:0}to{transform:scale(1);opacity:1}}
+.check-circle{width:70px;height:70px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:34px;animation:checkPop .4s .2s ease both}
+@keyframes checkPop{from{transform:scale(0)}to{transform:scale(1)}}
+.success-title{font-size:21px;font-weight:700;color:#1e293b;margin-bottom:8px}
+.success-desc{font-size:13px;color:#64748b;line-height:1.6;margin-bottom:22px}
+.btn-reset{background:#2563eb;color:#fff;border:none;padding:11px 26px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-reset:hover{background:#1d4ed8}
+.empty-msg{color:#94a3b8;font-size:13px;padding:4px 0}
+
+@media(max-width:640px){
+  .sign-layout,.preview-layout{grid-template-columns:1fr}
+  .signers-panel{position:static}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-size:22px">✍️</span>
+  <span class="logo">Sign<span>Flow</span></span>
+</div>
+
+<div class="progress">
+  <div class="step-item">
+    <div class="step-circle active" id="sc1">1</div>
+    <div class="step-label active" id="sl1">書類設定</div>
+  </div>
+  <div class="step-conn" id="cn1"></div>
+  <div class="step-item">
+    <div class="step-circle pending" id="sc2">2</div>
+    <div class="step-label" id="sl2">署名位置</div>
+  </div>
+  <div class="step-conn" id="cn2"></div>
+  <div class="step-item">
+    <div class="step-circle pending" id="sc3">3</div>
+    <div class="step-label" id="sl3">確認・送信</div>
+  </div>
+</div>
+
+<!-- STEP 1 -->
+<div class="main" id="step1">
+  <div class="card">
+    <div class="card-title">📄 ファイルを選択</div>
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📁</div>
+      <div class="upload-text">ここにファイルをドロップ</div>
+      <div class="upload-hint">または</div>
+      <label class="upload-btn-label">ファイルを選択
+        <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg">
+      </label>
+    </div>
+    <div class="file-chosen" id="fileChosen">
+      <span id="fileIconEl" style="font-size:28px">📄</span>
+      <div>
+        <div class="fname" id="fileName"></div>
+        <div class="fsize" id="fileSize"></div>
+      </div>
+      <span class="change-link" onclick="resetFile()">変更</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">👥 送信者・受信者</div>
+    <div class="sect-label">送信者</div>
+    <div class="people-list" id="senderList"></div>
+    <button class="btn-add" id="btnAddSender" onclick="addPerson('sender')">＋ 送信者を追加（最大3名）</button>
+    <div style="height:18px"></div>
+    <div class="sect-label">受信者</div>
+    <div class="people-list" id="recipientList"></div>
+    <button class="btn-add" id="btnAddRecipient" onclick="addPerson('recipient')">＋ 受信者を追加（最大3名）</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✉️ 送信メッセージ</div>
+    <textarea id="msgInput" placeholder="受信者へのメッセージを入力してください…"></textarea>
+  </div>
+
+  <div class="nav-bar">
+    <div></div>
+    <button class="btn-primary" onclick="goStep2()">署名位置を設定 →</button>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="main" id="step2" style="display:none">
+  <div class="sign-layout">
+    <div class="signers-panel">
+      <h3>署名者</h3>
+      <div id="signersList"></div>
+      <div class="tip-box">💡 左から署名者を選び、書類をクリックして署名欄を配置。ドラッグで移動、× で削除。</div>
+    </div>
+    <div class="doc-panel">
+      <div class="doc-hint">✏️ 署名者を選択 → 書類をクリックして署名欄を配置</div>
+      <div class="doc-viewer" id="docViewer">
+        <img id="docImg" style="display:none" alt="document">
+        <embed id="docPdf" style="display:none" type="application/pdf">
+        <div class="doc-overlay" id="docOverlay"></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav-bar" style="margin-top:14px">
+    <button class="btn-back" onclick="goStep(1)">← 戻る</button>
+    <button class="btn-primary" onclick="goStep3()">確認へ進む →</button>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div class="main" id="step3" style="display:none">
+  <div class="preview-layout">
+    <div class="preview-col">
+      <div class="preview-card">
+        <h3>送信者</h3>
+        <div id="pvSenders"></div>
+      </div>
+      <div class="preview-card">
+        <h3>受信者</h3>
+        <div id="pvRecipients"></div>
+      </div>
+      <div class="preview-card">
+        <h3>メッセージ</h3>
+        <div class="msg-preview" id="pvMsg"></div>
+      </div>
+      <div class="preview-card">
+        <h3>署名欄</h3>
+        <div class="sig-count-box">
+          <div class="sig-count-num" id="pvSigNum">0</div>
+          <div class="sig-count-label">署名欄が設定されています</div>
+        </div>
+      </div>
+    </div>
+    <div class="preview-doc-card">
+      <h3>書類プレビュー（署名欄付き）</h3>
+      <div class="preview-doc-wrap" id="pvDocWrap">
+        <img id="previewImg" style="display:none" alt="preview">
+        <embed id="previewPdf" style="display:none;width:100%;height:580px;border:none" type="application/pdf">
+      </div>
+    </div>
+  </div>
+  <div class="nav-bar" style="margin-top:14px">
+    <button class="btn-back" onclick="goStep(2)">← 戻る</button>
+    <button class="btn-primary" style="background:#10b981" onclick="sendDoc()">✉️ 送信する</button>
+  </div>
+</div>
+
+<!-- Success Modal -->
+<div class="success-bg" id="successBg">
+  <div class="success-modal">
+    <div class="check-circle">✓</div>
+    <div class="success-title">送信完了！</div>
+    <div class="success-desc">書類が正常に送信されました。<br>受信者にメール通知が届きます。</div>
+    <button class="btn-reset" onclick="location.reload()">新しい書類を作成</button>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#2563eb','#7c3aed','#059669','#dc2626','#d97706','#db2777'];
+
+const state = {
+  fileDataURL: null,
+  fileType: null,
+  senders: [],
+  recipients: [],
+  message: '',
+  sigs: [],
+  activeSigner: null
+};
+
+let pidCtr = 0;
+
+(function boot() {
+  addPerson('sender');
+  addPerson('recipient');
+  initUpload();
+})();
+
+function initUpload() {
+  const area = document.getElementById('uploadArea');
+  const inp  = document.getElementById('fileInput');
+  area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('dragover'); });
+  area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+  area.addEventListener('drop', e => {
+    e.preventDefault(); area.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+  area.addEventListener('click', e => { if (e.target !== inp) inp.click(); });
+  inp.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+}
+
+function loadFile(f) {
+  state.fileType = f.type;
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.fileDataURL = e.target.result;
+    document.getElementById('fileIconEl').textContent = f.type === 'application/pdf' ? '📋' : '🖼️';
+    document.getElementById('fileName').textContent = f.name;
+    document.getElementById('fileSize').textContent = fmtSize(f.size);
+    document.getElementById('uploadArea').style.display = 'none';
+    document.getElementById('fileChosen').classList.add('show');
+  };
+  reader.readAsDataURL(f);
+}
+
+function resetFile() {
+  state.fileDataURL = null;
+  document.getElementById('uploadArea').style.display = 'block';
+  document.getElementById('fileChosen').classList.remove('show');
+  document.getElementById('fileInput').value = '';
+}
+
+function fmtSize(b) {
+  if (b < 1024)    return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+function addPerson(role) {
+  const key  = role === 'sender' ? 'senders' : 'recipients';
+  if (state[key].length >= 3) return;
+  const total = state.senders.length + state.recipients.length;
+  state[key].push({ id: `${role}-${pidCtr++}`, role, name: '', email: '', color: COLORS[total % COLORS.length] });
+  renderPeople(role);
+  refreshAddBtns();
+}
+
+function removePerson(role, id) {
+  const key = role === 'sender' ? 'senders' : 'recipients';
+  if (state[key].length <= 1) return;
+  state[key] = state[key].filter(p => p.id !== id);
+  renderPeople(role);
+  refreshAddBtns();
+}
+
+function renderPeople(role) {
+  const key  = role === 'sender' ? 'senders' : 'recipients';
+  const elId = role === 'sender' ? 'senderList' : 'recipientList';
+  const list = state[key];
+  document.getElementById(elId).innerHTML = list.map(p => `
+    <div class="person-row">
+      <div class="dot" style="background:${p.color}"></div>
+      <input type="text" placeholder="氏名" value="${esc(p.name)}"
+        oninput="setProp('${key}','${p.id}','name',this.value)">
+      <input type="email" placeholder="メールアドレス" value="${esc(p.email)}"
+        oninput="setProp('${key}','${p.id}','email',this.value)">
+      ${list.length > 1
+        ? `<button class="btn-rm" onclick="removePerson('${role}','${p.id}')">×</button>`
+        : '<div style="width:22px"></div>'}
+    </div>
+  `).join('');
+}
+
+function setProp(key, id, field, val) {
+  const p = state[key].find(x => x.id === id);
+  if (p) p[field] = val;
+}
+
+function refreshAddBtns() {
+  document.getElementById('btnAddSender').disabled    = state.senders.length >= 3;
+  document.getElementById('btnAddRecipient').disabled = state.recipients.length >= 3;
+}
+
+function goStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById(`step${i}`).style.display = i === n ? 'block' : 'none';
+  });
+  updateProgress(n);
+}
+
+function updateProgress(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById(`sc${i}`).className = 'step-circle ' + (i < n ? 'done' : i === n ? 'active' : 'pending');
+    document.getElementById(`sl${i}`).className = 'step-label'   + (i < n ? ' done' : i === n ? ' active' : '');
+  });
+  document.getElementById('cn1').className = 'step-conn' + (n > 1 ? ' done' : '');
+  document.getElementById('cn2').className = 'step-conn' + (n > 2 ? ' done' : '');
+}
+
+function goStep2() {
+  if (!state.fileDataURL) { alert('ファイルを選択してください'); return; }
+  const named = allPeople().filter(p => p.name.trim());
+  if (named.length === 0) { alert('氏名を1名以上入力してください'); return; }
+  state.message = document.getElementById('msgInput').value;
+  goStep(2);
+  setupStep2();
+}
+
+function goStep3() {
+  goStep(3);
+  setupStep3();
+}
+
+function allPeople() {
+  return [
+    ...state.senders.map(p => ({ ...p, roleLabel: '送信者' })),
+    ...state.recipients.map(p => ({ ...p, roleLabel: '受信者' }))
+  ].filter(p => p.name.trim());
+}
+
+function setupStep2() {
+  renderSignersList();
+  mountDoc('docImg', 'docPdf');
+  const old = document.getElementById('docOverlay');
+  const fresh = old.cloneNode(false);
+  old.parentNode.replaceChild(fresh, old);
+  fresh.addEventListener('click', onDocClick);
+  redrawSigBoxes();
+}
+
+function renderSignersList() {
+  const people = allPeople();
+  document.getElementById('signersList').innerHTML = people.map(p => `
+    <div class="signer-card" id="sc-${p.id}" onclick="selectSigner('${p.id}')">
+      <div class="role-tag" style="background:${p.color}">${p.roleLabel}</div>
+      <div class="signer-name">${esc(p.name)}</div>
+      <div class="signer-email">${esc(p.email || '')}</div>
+    </div>
+  `).join('');
+  if (people.length) selectSigner(people[0].id);
+}
+
+function selectSigner(id) {
+  state.activeSigner = id;
+  allPeople().forEach(p => {
+    const el = document.getElementById(`sc-${p.id}`);
+    if (!el) return;
+    if (p.id === id) {
+      el.style.borderColor = p.color;
+      el.style.background  = hexAlpha(p.color, .06);
+    } else {
+      el.style.borderColor = 'transparent';
+      el.style.background  = '';
+    }
+  });
+}
+
+function mountDoc(imgId, pdfId) {
+  const img = document.getElementById(imgId);
+  const pdf = document.getElementById(pdfId);
+  if (state.fileType === 'application/pdf') {
+    img.style.display = 'none';
+    pdf.style.display = 'block';
+    pdf.src = state.fileDataURL;
+  } else {
+    pdf.style.display = 'none';
+    img.style.display = 'block';
+    img.src = state.fileDataURL;
+  }
+}
+
+function onDocClick(e) {
+  if (!state.activeSigner) return;
+  const overlay = document.getElementById('docOverlay');
+  const rect    = overlay.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width  * 100;
+  const y = (e.clientY - rect.top)  / rect.height * 100;
+  const signer = allPeople().find(p => p.id === state.activeSigner);
+  if (!signer) return;
+  state.sigs.push({ id: `sig-${Date.now()}`, signerId: signer.id, name: signer.name, color: signer.color, x, y });
+  redrawSigBoxes();
+}
+
+function redrawSigBoxes() {
+  const overlay = document.getElementById('docOverlay');
+  overlay.querySelectorAll('.sig-box').forEach(el => el.remove());
+  state.sigs.forEach(sig => {
+    const box = document.createElement('div');
+    box.className = 'sig-box';
+    box.id = `sb-${sig.id}`;
+    box.style.cssText = `left:${sig.x}%;top:${sig.y}%;border-color:${sig.color};color:${sig.color}`;
+    box.innerHTML = `✍️ ${esc(sig.name)}<button class="sig-del" onclick="removeSig('${sig.id}')">×</button>`;
+    makeDraggable(box, sig);
+    overlay.appendChild(box);
+  });
+}
+
+function removeSig(id) {
+  state.sigs = state.sigs.filter(s => s.id !== id);
+  redrawSigBoxes();
+}
+
+function makeDraggable(el, sig) {
+  let sx, sy, ox, oy;
+  el.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('sig-del')) return;
+    e.preventDefault(); e.stopPropagation();
+    sx = e.clientX; sy = e.clientY; ox = sig.x; oy = sig.y;
+    const move = mv => {
+      const overlay = document.getElementById('docOverlay');
+      const rect = overlay.getBoundingClientRect();
+      sig.x = Math.max(1, Math.min(97, ox + (mv.clientX - sx) / rect.width  * 100));
+      sig.y = Math.max(1, Math.min(97, oy + (mv.clientY - sy) / rect.height * 100));
+      el.style.left = sig.x + '%';
+      el.style.top  = sig.y + '%';
+    };
+    const up = () => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  });
+}
+
+function setupStep3() {
+  const senders    = state.senders.filter(p => p.name.trim());
+  const recipients = state.recipients.filter(p => p.name.trim());
+  document.getElementById('pvSenders').innerHTML    = personCards(senders)    || '<div class="empty-msg">なし</div>';
+  document.getElementById('pvRecipients').innerHTML = personCards(recipients) || '<div class="empty-msg">なし</div>';
+  document.getElementById('pvMsg').textContent = state.message || '（メッセージなし）';
+  document.getElementById('pvSigNum').textContent = state.sigs.length;
+  mountDoc('previewImg', 'previewPdf');
+  const wrap = document.getElementById('pvDocWrap');
+  wrap.querySelectorAll('.sig-box').forEach(el => el.remove());
+  state.sigs.forEach(sig => {
+    const box = document.createElement('div');
+    box.className = 'sig-box';
+    box.style.cssText = `left:${sig.x}%;top:${sig.y}%;border-color:${sig.color};color:${sig.color};cursor:default`;
+    box.textContent = `✍️ ${sig.name}`;
+    wrap.appendChild(box);
+  });
+}
+
+function personCards(list) {
+  return list.map(p => `
+    <div class="person-item">
+      <div class="avatar" style="background:${p.color}">${p.name.charAt(0).toUpperCase()}</div>
+      <div>
+        <div class="p-name">${esc(p.name)}</div>
+        <div class="p-email">${esc(p.email || 'メールなし')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function sendDoc() {
+  document.getElementById('successBg').classList.add('show');
+}
+
+function hexAlpha(hex, a) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
